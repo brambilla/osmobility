@@ -6,7 +6,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.Properties;
 import java.util.TreeMap;
 import java.util.zip.ZipFile;
@@ -65,7 +65,7 @@ public abstract class MobileNodeBirthEvent extends GeoNodeBirthEvent {
 		try {
 			readPathsSetFromFile();
 		} catch(IOException e) {
-			throw new InvalidParamsException("Error in paths param");
+			throw new InvalidParamsException("Error in paths param: " + pathsParam);
 		}
 	}
 
@@ -120,7 +120,9 @@ public abstract class MobileNodeBirthEvent extends GeoNodeBirthEvent {
 
 		for(JsonElement pathElement : jsonParser.parse(pathsString).getAsJsonObject().getAsJsonArray(Constants.PATHS)) {
 			Path path = new Path();
-			LinkedHashMap<Location, HashSet<OSMWay>> locations = new LinkedHashMap<Location, HashSet<OSMWay>>();
+			LinkedList<Location> locations = new LinkedList<Location>();
+			HashMap<Location, HashSet<OSMWay>> waysMappedToLocations = new HashMap<Location, HashSet<OSMWay>>();
+			//LinkedHashMap<Location, HashSet<OSMWay>> locations = new LinkedHashMap<Location, HashSet<OSMWay>>();
 
 			for(JsonElement locationElement : pathElement.getAsJsonObject().getAsJsonArray(Constants.PATH_LOCATIONS)) {
 				JsonObject locationObject = locationElement.getAsJsonObject();
@@ -131,10 +133,11 @@ public abstract class MobileNodeBirthEvent extends GeoNodeBirthEvent {
 					waysSet.add(ways.get(wayElement.getAsJsonObject().get(Constants.WAY_ID).getAsInt()));
 				}
 
-				locations.put(location, waysSet);
+				locations.add(location);
+				waysMappedToLocations.put(location, waysSet);
 			}
 
-			path.add(locations);
+			path.add(locations, waysMappedToLocations);
 
 			pathsSet.add(path);
 		}

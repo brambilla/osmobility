@@ -40,6 +40,7 @@ public class PathGenerator {
 	private static PathGeneratorMode mode = PathGeneratorMode.RANDOM;
 	private static Integer numberOfPaths = 100;
 	private static HashSet<Location> switchstations;
+	private static Double pathsMinimumLength = 0.0d;
 
 	private static HashSet<Path> pathsSet;
 
@@ -157,87 +158,6 @@ public class PathGenerator {
 		}
 	}
 
-	/*
-	private static void readPathsFromFile() {
-		try {
-			ZipFile zipFile = new ZipFile("parma.zip");
-			InputStream pathsInputStream = zipFile.getInputStream(zipFile.getEntry(Constants.PATHS_ENTRY_NAME));
-			String pathsString = "";
-			BufferedReader pathsBufferedReader = new BufferedReader(new InputStreamReader(pathsInputStream));
-			String line;
-			while((line = pathsBufferedReader.readLine()) != null) {
-				pathsString = pathsString + line;
-			}
-			pathsBufferedReader.close();
-			pathsInputStream.close();
-
-			InputStream waysInputStream = zipFile.getInputStream(zipFile.getEntry(Constants.WAYS_ENTRY_NAME));
-			String waysString = "";
-			BufferedReader waysBufferedReader = new BufferedReader(new InputStreamReader(waysInputStream));
-			while((line = waysBufferedReader.readLine()) != null) {
-				waysString = waysString + line;
-			}
-			waysBufferedReader.close();
-			waysInputStream.close();
-
-			InputStream nodesInputStream = zipFile.getInputStream(zipFile.getEntry(Constants.NODES_ENTRY_NAME));
-			String nodesString = "";
-			BufferedReader nodesBufferedReader = new BufferedReader(new InputStreamReader(nodesInputStream));
-			while((line = nodesBufferedReader.readLine()) != null) {
-				nodesString = nodesString + line;
-			}
-			nodesBufferedReader.close();
-			nodesInputStream.close();
-
-			zipFile.close();
-
-			JsonParser jsonParser = new JsonParser();
-			HashSet<Path> paths = new HashSet<Path>();
-			HashMap<Integer, OSMNode> nodes = new HashMap<Integer, OSMNode>();
-			HashMap<Integer, OSMWay> ways = new HashMap<Integer, OSMWay>();
-
-			for(JsonElement nodeElement : jsonParser.parse(nodesString).getAsJsonObject().getAsJsonArray(Constants.NODES)) {
-				OSMNode node = new OSMNode(nodeElement.getAsJsonObject().get(Constants.NODE_ID).getAsInt(), new Location(nodeElement.getAsJsonObject().get(Constants.NODE_LATITUDE).getAsDouble(), nodeElement.getAsJsonObject().get(Constants.NODE_LONGITUDE).getAsDouble()));
-				nodes.put(nodeElement.getAsJsonObject().get(Constants.NODE_ID).getAsInt(), node);
-			}
-
-			for(JsonElement wayElement : jsonParser.parse(waysString).getAsJsonObject().getAsJsonArray(Constants.WAYS)) {
-				OSMNode source = nodes.get(wayElement.getAsJsonObject().get(Constants.WAY_SOURCE_ID).getAsInt());
-				OSMNode target = nodes.get(wayElement.getAsJsonObject().get(Constants.WAY_TARGET_ID).getAsInt());
-				OSMWay way = new OSMWay(wayElement.getAsJsonObject().get(Constants.WAY_ID).getAsInt(), wayElement.getAsJsonObject().get(Constants.WAY_LENGTH).getAsDouble(), wayElement.getAsJsonObject().get(Constants.WAY_MAXIMUM_SPEED_FORWARD).getAsDouble(), wayElement.getAsJsonObject().get(Constants.WAY_MAXIMUM_SPEED_BACKWARD).getAsDouble(), wayElement.getAsJsonObject().get(Constants.WAY_MINIMUM_SPEED_FORWARD).getAsDouble(), wayElement.getAsJsonObject().get(Constants.WAY_MINIMUM_SPEED_BACKWARD).getAsDouble(), source, target);
-
-				ways.put(wayElement.getAsJsonObject().get(Constants.WAY_ID).getAsInt(), way);
-			}
-
-			for(JsonElement pathElement : jsonParser.parse(pathsString).getAsJsonObject().getAsJsonArray(Constants.PATHS)) {
-				Path path = new Path();
-				LinkedHashMap<Location, HashSet<OSMWay>> locations = new LinkedHashMap<Location, HashSet<OSMWay>>();
-
-				for(JsonElement locationElement : pathElement.getAsJsonObject().getAsJsonArray(Constants.PATH_LOCATIONS)) {
-					JsonObject locationObject = locationElement.getAsJsonObject();
-					Location location = new Location(locationObject.get(Constants.PATH_LOCATION_LATITUDE).getAsDouble(), locationObject.get(Constants.PATH_LOCATION_LONGITUDE).getAsDouble());
-
-					HashSet<OSMWay> waysSet = new HashSet<OSMWay>();
-					for(JsonElement wayElement : locationObject.getAsJsonArray(Constants.PATH_WAYS_IDS)) {
-						waysSet.add(ways.get(wayElement.getAsJsonObject().get(Constants.WAY_ID).getAsInt()));
-					}
-
-					locations.put(location, waysSet);
-				}
-
-				path.add(locations);
-
-				paths.add(path);
-			}
-
-			System.out.println("Ho letto " + paths.size() + " percorsi.");
-
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	 */
-
 	private static void generatePaths() {
 		try {
 			System.out.println("Connecting to database…");
@@ -246,8 +166,24 @@ public class PathGenerator {
 			System.out.println("\nGenerating paths…");
 			if(mode.equals(PathGeneratorMode.RANDOM)) {
 				while(pathsSet.size() < numberOfPaths) {
-					pathsSet.add(Database.getRandomPath(vehicle, resolution));
-					System.out.println(pathsSet.size() + "/" + numberOfPaths + " paths generated.");
+					Path path = Database.getRandomPath(vehicle, resolution);
+					boolean pathCorrectlyGenerated = true;
+					while(path.length() < pathsMinimumLength) {
+						Path newPath = null;
+						while(newPath == null) {
+							newPath = Database.getRandomPath(path.getLastLocation(), vehicle, resolution);
+						}
+						if(path.getLastLocation().equals(newPath.getFirstLocation())) {
+							path = path.concat(newPath.subPath(newPath.indexOf(newPath.getFirstLocation()) + 1));
+						} else {
+							pathCorrectlyGenerated = false;
+							break;
+						}
+					}
+					if(pathCorrectlyGenerated) {
+						pathsSet.add(path);
+						System.out.println(pathsSet.size() + "/" + numberOfPaths + " paths generated.");
+					}
 
 				}
 			} else if(mode.equals(PathGeneratorMode.SWITCHSTATION)) {
@@ -345,6 +281,13 @@ public class PathGenerator {
 						System.err.println("Argument -m must be a valid PathGeneratorMode.");
 						System.exit(5);
 					}
+				} else if(args[i].equals("-l")) {
+					try {
+						pathsMinimumLength = Double.parseDouble(args[i+1]);
+					} catch (NumberFormatException e) {
+						System.err.println("Argument -l requires a Double.");
+						System.exit(6);
+					}
 				}
 			}
 		} else {
@@ -355,7 +298,8 @@ public class PathGenerator {
 			System.out.println("-v → vehicle (the type of vehicle for which the paths are generated [MOTORCAR, MOTORCYCLE, HORSE, BICYCLE, FOOT])");
 			System.out.println("-r → resolution (the resolution in Kilometers between the locations of the paths generated");
 			System.out.println("-f → file (the name of the file containing the paths generated)");
-			System.out.println("-m → mode (the way the paths are generated [RANDOM, SWITCHSTATION]");
+			System.out.println("-m → mode (the way the paths are generated [RANDOM, SWITCHSTATION])");
+			System.out.println("-l → length (the minimum length of generated paths)");
 		}
 	}
 }

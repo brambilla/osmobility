@@ -8,9 +8,9 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 
 /**
@@ -20,8 +20,8 @@ import java.util.LinkedList;
  */
 
 public class Database {
-	private static final String DRIVER_NAME = "org.postgresql.Driver"; 
 
+	private static final String DRIVER_NAME = "org.postgresql.Driver"; 
 	private static Connection connection = null;
 
 	/**
@@ -92,50 +92,6 @@ public class Database {
 	}
 
 	/**
-	 * Returns a node that allows the access of the specified vehicle of the map nearest to the specified location.
-	 * @param location
-	 * - nearest location to the node. 
-	 * @param vehicle
-	 * - a vehicle allowed to access the node.
-	 * @return
-	 * a node that allows the access of the specified vehicle nearest to the specified location.
-	 * @throws SQLException
-	 */
-	public static OSMNode getOSMNodeNearestToLocation(Location location, OSMVehicle vehicle) throws SQLException {
-		PreparedStatement s;
-		switch(vehicle) {
-		case MOTORCAR:
-			s = connection.prepareStatement("SELECT w.source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('pedestrian', 'path', 'bridleway', 'cycleway', 'footway') ORDER BY ST_Distance_Sphere(ST_SetSRID(ST_MakePoint(w.x1, w.y1), 4326), ST_SetSRID(ST_MakePoint(?, ?), 4326)) ASC LIMIT 1");
-			break;
-		case MOTORCYCLE:
-			s = connection.prepareStatement("SELECT w.source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('pedestrian', 'path', 'bridleway', 'cycleway', 'footway') ORDER BY ST_Distance_Sphere(ST_SetSRID(ST_MakePoint(w.x1, w.y1), 4326), ST_SetSRID(ST_MakePoint(?, ?), 4326)) ASC LIMIT 1");
-			break;
-		case BICYCLE:
-			s = connection.prepareStatement("SELECT w.source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('motorway', 'pedestrian', 'bridleway', 'footway') ORDER BY ST_Distance_Sphere(ST_SetSRID(ST_MakePoint(w.x1, w.y1), 4326), ST_SetSRID(ST_MakePoint(?, ?), 4326)) ASC LIMIT 1");
-			break;
-		case FOOT:
-			s = connection.prepareStatement("SELECT w.source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('motorway', 'bridleway', 'cycleway') ORDER BY ST_Distance_Sphere(ST_SetSRID(ST_MakePoint(w.x1, w.y1), 4326), ST_SetSRID(ST_MakePoint(?, ?), 4326)) ASC LIMIT 1");
-			break;
-		case HORSE:
-			s = connection.prepareStatement("SELECT w.source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('motorway', 'pedestrian', 'cycleway', 'footway') ORDER BY ST_Distance_Sphere(ST_SetSRID(ST_MakePoint(w.x1, w.y1), 4326), ST_SetSRID(ST_MakePoint(?, ?), 4326)) ASC LIMIT 1");
-			break;
-		default:
-			s = connection.prepareStatement("SELECT w.source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('pedestrian', 'path', 'bridleway', 'cycleway', 'footway') ORDER BY ST_Distance_Sphere(ST_SetSRID(ST_MakePoint(w.x1, w.y1), 4326), ST_SetSRID(ST_MakePoint(?, ?), 4326)) ASC LIMIT 1");
-			break;
-		}
-		s.setDouble(1, location.getLongitude());
-		s.setDouble(2, location.getLatitude());
-		ResultSet rs = s.executeQuery();
-		OSMNode nearestNode = null;
-		if (rs.next()) {
-			nearestNode = new OSMNode(rs.getInt(1), new Location(rs.getDouble(2), rs.getDouble(3)));
-		}
-		rs.close();
-		s.close();
-		return nearestNode;
-	}
-
-	/**
 	 * Returns a random path for the specified vehicle with the specified resolution.
 	 * @param vehicle
 	 * - the type vehicle that follows the path.
@@ -147,7 +103,7 @@ public class Database {
 	public static Path getRandomPath(OSMVehicle vehicle, Double resolution) throws SQLException {
 		OSMNode departure = getRandomOSMNode(vehicle);
 		OSMNode arrival = getRandomOSMNode(vehicle);
-		
+
 		Path path = getPath(departure, arrival, vehicle, resolution);
 		if(path == null) {
 			return getRandomPath(vehicle, resolution);
@@ -173,10 +129,10 @@ public class Database {
 	public static Path getPath(Location departure, Location arrival, OSMVehicle vehicle, Double resolution) throws SQLException {
 		OSMNode departureOSMNode = getNearestOSMNode(departure, vehicle);
 		OSMNode arrivalOSMNode = getNearestOSMNode(arrival, vehicle);
-		
+
 		return getPath(departureOSMNode, arrivalOSMNode, vehicle, resolution);
 	}
-	
+
 	/**
 	 * Returns a path for the specified vehicle with the specified resolution from departure to arrival.
 	 * @param departure
@@ -219,7 +175,9 @@ public class Database {
 		ResultSet rs1 = s1.executeQuery();
 		Integer lastSourceId = departure.getId();
 
-		LinkedHashMap<Location, HashSet<OSMWay>> pathLocations = new LinkedHashMap<Location, HashSet<OSMWay>>();
+		//LinkedHashMap<Location, HashSet<OSMWay>> pathLocations = new LinkedHashMap<Location, HashSet<OSMWay>>();
+		LinkedList<Location> locations = new LinkedList<Location>();
+		HashMap<Location, HashSet<OSMWay>> waysMappedToLocations = new HashMap<Location, HashSet<OSMWay>>();
 
 		while(rs1.next()) {
 
@@ -273,31 +231,34 @@ public class Database {
 			s2.setInt(4, id);
 			ResultSet rs2 = s2.executeQuery();
 
-			LinkedList<Location> wayLocations = new LinkedList<Location>();
+			LinkedList<Location> locationsOfTheWay = new LinkedList<Location>();
 			while(rs2.next()) {
 				Double longitude = rs2.getDouble(3);
 				Double latitude = rs2.getDouble(4); 
-				wayLocations.add(new Location(latitude, longitude));
+				locationsOfTheWay.add(new Location(latitude, longitude));
 			}
 			rs2.close();
 			s2.close();
 
 			Iterator<Location> iterator;
 			if(lastSourceId.equals(targetId)) {
-				iterator = wayLocations.descendingIterator();
+				iterator = locationsOfTheWay.descendingIterator();
 				lastSourceId = sourceId;
 			} else {
-				iterator = wayLocations.iterator();
+				iterator = locationsOfTheWay.iterator();
 				lastSourceId = targetId;
 			}
 			while(iterator.hasNext()) {
 				Location location = iterator.next();
-				if(pathLocations.containsKey(location)) {
-					pathLocations.get(location).add(way);
+				if(locations.isEmpty() || !locations.getLast().equals(location)) {
+					locations.add(location);
+				}
+				if(waysMappedToLocations.containsKey(location)) {
+					waysMappedToLocations.get(location).add(way);
 				} else {
 					HashSet<OSMWay> ways = new HashSet<OSMWay>();
 					ways.add(way);
-					pathLocations.put(location, ways);
+					waysMappedToLocations.put(location, ways);
 				}
 			}
 		}
@@ -306,13 +267,13 @@ public class Database {
 		s1.close();
 		connection.setAutoCommit(true);
 
-		if(pathLocations.isEmpty()) {
+		if(locations.isEmpty()) {
 			return null;
 		} else {
-			return new Path(pathLocations);
+			return new Path(locations, waysMappedToLocations);
 		}
 	}
-	
+
 	/**
 	 * Returns the nearest OSMNode to the specified location for the specified vehicle.
 	 * @param location
@@ -355,5 +316,24 @@ public class Database {
 		rs.close();
 		s.close();
 		return nearestNode;
+	}
+
+	/**
+	 * Returns a random path for the specified vehicle with the specified resolution from departure.
+	 * @param departure
+	 * - the location where the path starts.
+	 * @param vehicle
+	 * - the type vehicle that follows the path.
+	 * @param resolution
+	 * - maximum resolution of distance between locations of the path.
+	 * @return
+	 * a path accessible by the specified vehicle with the specified resolution that starts from departure and ends in a random location or null if no path exists.
+	 * @throws SQLException
+	 */
+	public static Path getRandomPath(Location departure, OSMVehicle vehicle, Double resolution) throws SQLException {
+		OSMNode departureOSMNode = getNearestOSMNode(departure, vehicle);
+		OSMNode arrivalOSMNode = getRandomOSMNode(vehicle);
+
+		return getPath(departureOSMNode, arrivalOSMNode, vehicle, resolution);
 	}
 }

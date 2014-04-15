@@ -5,6 +5,7 @@ import it.unipr.ce.dsg.osmobility.exception.PathNotFoundException;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Iterator;
 
 /**
  * 
@@ -12,7 +13,7 @@ import java.util.HashSet;
  * 
  */
 
-public class PathsSet {
+public class PathsSet implements Iterable<Path> {
 
 	private static PathsSet instance = null;
 	private HashSet<Path> paths;
@@ -118,6 +119,11 @@ public class PathsSet {
 	 */
 	public int size() {
 		return paths.size();
+	}
+
+	@Override
+	public Iterator<Path> iterator() {
+		return paths.iterator();
 	}
 
 }

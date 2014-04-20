@@ -91,7 +91,7 @@ public class Path implements Iterable<Location> {
 	 * true if the path has more locations.
 	 */
 	public boolean hasNextLocation(Location location) {
-		return locations.indexOf(location) < locations.size();
+		return locations.indexOf(location) < (locations.size() - 1);
 
 	}
 
@@ -128,13 +128,15 @@ public class Path implements Iterable<Location> {
 				return locationWays.iterator().next();
 			} else {
 				if(locationWays.retainAll(nextLocationWays)) {
-					if(locationWays.size() == 1) {
+					if(locationWays.isEmpty()) {
+						return waysMappedToLocations.get(location).iterator().next();
+					} else if(locationWays.size() == 1) {
 						return locationWays.iterator().next();
 					} else {
-						throw new NoSuchElementException();
+						return locationWays.iterator().next();
 					}
 				} else {
-					throw new NoSuchElementException();
+					return locationWays.iterator().next();
 				}
 			}
 		} else {

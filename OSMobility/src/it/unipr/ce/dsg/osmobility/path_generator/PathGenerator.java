@@ -41,6 +41,10 @@ public class PathGenerator {
 	private static Integer numberOfPaths = 100;
 	private static HashSet<Location> switchstations;
 	private static Double pathsMinimumLength = 0.0d;
+	private static Double minimumLongitude = null;
+	private static Double maximumLongitude = null;
+	private static Double minimumLatitude = null;
+	private static Double maximumLatitude = null;
 
 	private static HashSet<Path> pathsSet;
 
@@ -166,12 +170,22 @@ public class PathGenerator {
 			System.out.println("\nGenerating paths…");
 			if(mode.equals(PathGeneratorMode.RANDOM)) {
 				while(pathsSet.size() < numberOfPaths) {
-					Path path = Database.getRandomPath(vehicle, resolution);
+					long pathGenerationStartTime = System.currentTimeMillis();
+					Path path;
+					if(minimumLongitude == null || maximumLongitude == null || maximumLatitude == null || minimumLatitude == null) {
+						path = Database.getRandomPath(vehicle, resolution);
+					} else {
+						path = Database.getRandomPath(vehicle, resolution, minimumLongitude, maximumLongitude, maximumLatitude, minimumLatitude);
+					}
 					boolean pathCorrectlyGenerated = true;
 					while(path.length() < pathsMinimumLength) {
 						Path newPath = null;
 						while(newPath == null) {
-							newPath = Database.getRandomPath(path.getLastLocation(), vehicle, resolution);
+							if(minimumLongitude == null || maximumLongitude == null || maximumLatitude == null || minimumLatitude == null) {
+								newPath = Database.getRandomPath(path.getLastLocation(), vehicle, resolution);
+							} else {
+								newPath = Database.getRandomPath(path.getLastLocation(), vehicle, resolution, minimumLongitude, maximumLongitude, maximumLatitude, minimumLatitude);
+							}
 						}
 						if(path.getLastLocation().equals(newPath.getFirstLocation())) {
 							path = path.concat(newPath.subPath(newPath.indexOf(newPath.getFirstLocation()) + 1));
@@ -182,7 +196,8 @@ public class PathGenerator {
 					}
 					if(pathCorrectlyGenerated) {
 						pathsSet.add(path);
-						System.out.println(pathsSet.size() + "/" + numberOfPaths + " paths generated.");
+						long pathGenerationEndTime = System.currentTimeMillis();
+						System.out.println(pathsSet.size() + "/" + numberOfPaths + " paths generated in " + (pathGenerationEndTime-pathGenerationStartTime) + " millis.");
 					}
 
 				}
@@ -287,6 +302,16 @@ public class PathGenerator {
 					} catch (NumberFormatException e) {
 						System.err.println("Argument -l requires a Double.");
 						System.exit(6);
+					}
+				}  else if(args[i].equals("-bb")) {
+					try {
+						minimumLongitude = Double.parseDouble(args[i+1]);
+						maximumLongitude = Double.parseDouble(args[i+2]);
+						maximumLatitude = Double.parseDouble(args[i+3]);
+						minimumLatitude = Double.parseDouble(args[i+4]);
+					} catch (NumberFormatException e) {
+						System.err.println("Argument -bb requires 4 Double values for minimum longitude, maximum longitude, maximum latitude and minimum latitude.");
+						System.exit(7);
 					}
 				}
 			}

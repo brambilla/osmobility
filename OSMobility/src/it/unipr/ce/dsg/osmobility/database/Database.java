@@ -92,6 +92,58 @@ public class Database {
 	}
 
 	/**
+	 * Returns a random node of a random way of the map for the specified vehicle inside a bounding box delimited by the specified coordinates.
+	 * @param vehicle
+	 * - a vehicle allowed to access the node.
+	 * @return
+	 * a random node from a random way that allows the access of the specified vehicle.
+	 * * @param left
+	 * - left-most longitude of the bounding box
+	 * @param right
+	 * - right-most longitude of the bounding box
+	 * @param top
+	 * - highest latitude of the bounding box
+	 * @param bottom
+	 * - lowest latitude of the bounding box
+	 * @throws SQLException
+	 */
+	public static OSMNode getRandomOSMNode(OSMVehicle vehicle, Double left, Double right, Double top, Double bottom) throws SQLException {
+		PreparedStatement s;
+		switch(vehicle) {
+		case MOTORCAR:
+			s = connection.prepareStatement("SELECT source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('pedestrian', 'path', 'bridleway', 'cycleway', 'footway') AND w.x1 > ? AND w.x1 < ? AND w.y1 < ? AND w.y1 > ? ORDER BY RANDOM() LIMIT 1");
+			break;
+		case MOTORCYCLE:
+			s = connection.prepareStatement("SELECT source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('pedestrian', 'path', 'bridleway', 'cycleway', 'footway') AND w.x1 > ? AND w.x1 < ? AND w.y1 < ? AND w.y1 > ? ORDER BY RANDOM() LIMIT 1");
+			break;
+		case BICYCLE:
+			s = connection.prepareStatement("SELECT source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('motorway', 'pedestrian', 'bridleway', 'footway') AND w.x1 > ? AND w.x1 < ? AND w.y1 < ? AND w.y1 > ? ORDER BY RANDOM() LIMIT 1");
+			break;
+		case FOOT:
+			s = connection.prepareStatement("SELECT source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('motorway', 'bridleway', 'cycleway') AND w.x1 > ? AND w.x1 < ? AND w.y1 < ? AND w.y1 > ? ORDER BY RANDOM() LIMIT 1");
+			break;
+		case HORSE:
+			s = connection.prepareStatement("SELECT source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('motorway', 'pedestrian', 'cycleway', 'footway') AND w.x1 > ? AND w.x1 < ? AND w.y1 < ? AND w.y1 > ? ORDER BY RANDOM() LIMIT 1");
+			break;
+		default:
+			s = connection.prepareStatement("SELECT source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('pedestrian', 'path', 'bridleway', 'cycleway', 'footway') AND w.x1 > ? AND w.x1 < ? AND w.y1 < ? AND w.y1 > ? ORDER BY RANDOM() LIMIT 1");
+			break;
+		}
+		s.setDouble(1, left);
+		s.setDouble(2, right);
+		s.setDouble(3, top);
+		s.setDouble(4, bottom);
+		ResultSet rs = s.executeQuery();
+		OSMNode node = null;
+		if (rs.next()) {
+			node = new OSMNode(rs.getInt(1), new Location(rs.getDouble(2), rs.getDouble(3)));
+		}
+		rs.close();
+		s.close();
+		return node;
+	}
+
+	/**
 	 * Returns a random path for the specified vehicle with the specified resolution.
 	 * @param vehicle
 	 * - the type vehicle that follows the path.
@@ -103,6 +155,35 @@ public class Database {
 	public static Path getRandomPath(OSMVehicle vehicle, Double resolution) throws SQLException {
 		OSMNode departure = getRandomOSMNode(vehicle);
 		OSMNode arrival = getRandomOSMNode(vehicle);
+
+		Path path = getPath(departure, arrival, vehicle, resolution);
+		if(path == null) {
+			return getRandomPath(vehicle, resolution);
+		} else {
+			return path;
+		}
+	}
+
+	/**
+	 * Returns a random path for the specified vehicle with the specified resolution inside a bounding box delimited by the specified coordinates.
+	 * @param vehicle
+	 * - the type vehicle that follows the path
+	 * @param resolution
+	 * - maximum resolution of distance between locations of the path
+	 * @param left
+	 * - left-most longitude of the bounding box
+	 * @param right
+	 * - right-most longitude of the bounding box
+	 * @param top
+	 * - highest latitude of the bounding box
+	 * @param bottom
+	 * - lowest latitude of the bounding box
+	 * @return
+	 * a random path accessible by the specified vehicle with the specified resolution inside the specified bounding box
+	 */
+	public static Path getRandomPath(OSMVehicle vehicle, Double resolution, Double left, Double right, Double top, Double bottom) throws SQLException {
+		OSMNode departure = getRandomOSMNode(vehicle, left, right, top, bottom);
+		OSMNode arrival = getRandomOSMNode(vehicle, left, right, top, bottom);
 
 		Path path = getPath(departure, arrival, vehicle, resolution);
 		if(path == null) {
@@ -175,7 +256,6 @@ public class Database {
 		ResultSet rs1 = s1.executeQuery();
 		Integer lastSourceId = departure.getId();
 
-		//LinkedHashMap<Location, HashSet<OSMWay>> pathLocations = new LinkedHashMap<Location, HashSet<OSMWay>>();
 		LinkedList<Location> locations = new LinkedList<Location>();
 		HashMap<Location, HashSet<OSMWay>> waysMappedToLocations = new HashMap<Location, HashSet<OSMWay>>();
 
@@ -333,6 +413,33 @@ public class Database {
 	public static Path getRandomPath(Location departure, OSMVehicle vehicle, Double resolution) throws SQLException {
 		OSMNode departureOSMNode = getNearestOSMNode(departure, vehicle);
 		OSMNode arrivalOSMNode = getRandomOSMNode(vehicle);
+
+		return getPath(departureOSMNode, arrivalOSMNode, vehicle, resolution);
+	}
+
+	/**
+	 * Returns a random path for the specified vehicle with the specified resolution from departure inside a bounding box delimited by the specified coordinates.
+	 * @param departure
+	 * - the location where the path starts.
+	 * @param vehicle
+	 * - the type vehicle that follows the path.
+	 * @param resolution
+	 * - maximum resolution of distance between locations of the path.
+	 *  @param left
+	 * - left-most longitude of the bounding box
+	 * @param right
+	 * - right-most longitude of the bounding box
+	 * @param top
+	 * - highest latitude of the bounding box
+	 * @param bottom
+	 * - lowest latitude of the bounding box
+	 * @return
+	 * a path accessible by the specified vehicle with the specified resolution that starts from departure and ends in a random location inside the specified bounding box or null if no path exists.
+	 * @throws SQLException
+	 */
+	public static Path getRandomPath(Location departure, OSMVehicle vehicle, Double resolution, Double left, Double right, Double top, Double bottom) throws SQLException {
+		OSMNode departureOSMNode = getNearestOSMNode(departure, vehicle);
+		OSMNode arrivalOSMNode = getRandomOSMNode(vehicle, left, right, top, bottom);
 
 		return getPath(departureOSMNode, arrivalOSMNode, vehicle, resolution);
 	}

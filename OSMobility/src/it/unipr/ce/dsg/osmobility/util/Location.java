@@ -101,6 +101,47 @@ public class Location {
 	}
 	
 	/**
+	 * Returns initial bearing (sometimes referred to as forward azimuth) which if followed in a straight line along a great-circle arc will take you from this {@link Location} to the specified {@link Location}.
+	 * @param location
+	 * - end point of the straight line along a great-circle arc
+	 * @return
+	 * initial bearing in degrees from this {@link Location} to the specified {@link Location}
+	 */
+	public Double initialBearingTo(Location location) {
+        Double y = Math.sin(Math.toRadians(location.longitude - this.longitude)) * Math.cos(Math.toRadians(location.latitude));
+        Double x = Math.cos(Math.toRadians(this.latitude))*Math.sin(Math.toRadians(location.latitude)) - Math.sin(Math.toRadians(this.latitude))*Math.cos(Math.toRadians(location.latitude))*Math.cos(Math.toRadians(location.longitude - this.longitude));
+        return (Math.toDegrees(Math.atan2(y, x))+360.0)%360.0;
+	}
+	
+	/**
+	 * Returns final bearing which if followed in a straight line along a great-circle arc will take you from this {@link Location} to the specified {@link Location}.
+	 * @param location
+	 * - end point of the straight line along a great-circle arc
+	 * @return
+	 * final bearing in degrees from this {@link Location} to the specified {@link Location}
+	 */
+	public Double finalBearingTo(Location location) {
+		return (location.initialBearingTo(this) + 180.0)%360.0;
+	}
+	
+	/**
+	 * Returns the destination location starting from this {@link Location}, with the specified initial bearing and travelling along a great circle arc the specified distance.
+	 * @param initialBearing
+	 * - initial bearing in degrees
+	 * @param distance
+	 * - distance in kilometres
+	 * @return
+	 * the destination location starting from this {@link Location}, with the specified initial bearing and travelling along a great circle arc the specified distance
+	 */
+	public Location arrivesTo(Double initialBearing, Double distance) {
+		Double latitude = Math.toDegrees(Math.asin(Math.sin(Math.toRadians(this.latitude))*Math.cos(distance/EARTH_RADIUS) + Math.cos(Math.toRadians(this.latitude))*Math.sin(distance/EARTH_RADIUS)*Math.cos(Math.toRadians(initialBearing))));
+
+		Double longitude = this.longitude + Math.toDegrees(Math.atan2(Math.sin(Math.toRadians(initialBearing)) * Math.sin(distance/EARTH_RADIUS) * Math.cos(Math.toRadians(this.latitude)), Math.cos(distance/EARTH_RADIUS) - Math.sin(Math.toRadians(this.latitude)) * Math.sin(Math.toRadians(latitude))));
+				
+		return new Location(latitude, longitude);
+	}
+	
+	/**
 	 * Indicates whether some other location is "equal to" this one.
 	 * @param location
 	 * - the reference location with which to compare.

@@ -122,7 +122,6 @@ public abstract class MobileNodeBirthEvent extends GeoNodeBirthEvent {
 			Path path = new Path();
 			LinkedList<Location> locations = new LinkedList<Location>();
 			HashMap<Location, HashSet<OSMWay>> waysMappedToLocations = new HashMap<Location, HashSet<OSMWay>>();
-			//LinkedHashMap<Location, HashSet<OSMWay>> locations = new LinkedHashMap<Location, HashSet<OSMWay>>();
 
 			for(JsonElement locationElement : pathElement.getAsJsonObject().getAsJsonArray(Constants.PATH_LOCATIONS)) {
 				JsonObject locationObject = locationElement.getAsJsonObject();

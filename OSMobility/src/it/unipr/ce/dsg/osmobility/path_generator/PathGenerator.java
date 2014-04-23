@@ -213,7 +213,6 @@ public class PathGenerator {
 						}
 					}
 				}
-
 			}
 			System.out.println("Paths generated.");
 			System.out.println("\nDisconnecting from database…");

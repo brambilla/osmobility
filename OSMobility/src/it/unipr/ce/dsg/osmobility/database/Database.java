@@ -111,28 +111,28 @@ public class Database {
 		PreparedStatement s;
 		switch(vehicle) {
 		case MOTORCAR:
-			s = connection.prepareStatement("SELECT source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('pedestrian', 'path', 'bridleway', 'cycleway', 'footway') AND w.x1 > ? AND w.x1 < ? AND w.y1 < ? AND w.y1 > ? ORDER BY RANDOM() LIMIT 1");
+			s = connection.prepareStatement("SELECT source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('pedestrian', 'path', 'bridleway', 'cycleway', 'footway') AND ST_Contains(ST_SetSRID(ST_MakeBox2D(ST_SetSRID(ST_MakePoint(?, ?), 4326), ST_SetSRID(ST_MakePoint(?, ?), 4326)), 4326), w.the_geom) ORDER BY RANDOM() LIMIT 1");
 			break;
 		case MOTORCYCLE:
-			s = connection.prepareStatement("SELECT source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('pedestrian', 'path', 'bridleway', 'cycleway', 'footway') AND w.x1 > ? AND w.x1 < ? AND w.y1 < ? AND w.y1 > ? ORDER BY RANDOM() LIMIT 1");
+			s = connection.prepareStatement("SELECT source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('pedestrian', 'path', 'bridleway', 'cycleway', 'footway') AND ST_Contains(ST_SetSRID(ST_MakeBox2D(ST_SetSRID(ST_MakePoint(?, ?), 4326), ST_SetSRID(ST_MakePoint(?, ?), 4326)), 4326), w.the_geom) ORDER BY RANDOM() LIMIT 1");
 			break;
 		case BICYCLE:
-			s = connection.prepareStatement("SELECT source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('motorway', 'pedestrian', 'bridleway', 'footway') AND w.x1 > ? AND w.x1 < ? AND w.y1 < ? AND w.y1 > ? ORDER BY RANDOM() LIMIT 1");
+			s = connection.prepareStatement("SELECT source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('motorway', 'pedestrian', 'bridleway', 'footway') AND ST_Contains(ST_SetSRID(ST_MakeBox2D(ST_SetSRID(ST_MakePoint(?, ?), 4326), ST_SetSRID(ST_MakePoint(?, ?), 4326)), 4326), w.the_geom) ORDER BY RANDOM() LIMIT 1");
 			break;
 		case FOOT:
-			s = connection.prepareStatement("SELECT source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('motorway', 'bridleway', 'cycleway') AND w.x1 > ? AND w.x1 < ? AND w.y1 < ? AND w.y1 > ? ORDER BY RANDOM() LIMIT 1");
+			s = connection.prepareStatement("SELECT source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('motorway', 'bridleway', 'cycleway') AND ST_Contains(ST_SetSRID(ST_MakeBox2D(ST_SetSRID(ST_MakePoint(?, ?), 4326), ST_SetSRID(ST_MakePoint(?, ?), 4326)), 4326), w.the_geom) ORDER BY RANDOM() LIMIT 1");
 			break;
 		case HORSE:
-			s = connection.prepareStatement("SELECT source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('motorway', 'pedestrian', 'cycleway', 'footway') AND w.x1 > ? AND w.x1 < ? AND w.y1 < ? AND w.y1 > ? ORDER BY RANDOM() LIMIT 1");
+			s = connection.prepareStatement("SELECT source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('motorway', 'pedestrian', 'cycleway', 'footway') AND ST_Contains(ST_SetSRID(ST_MakeBox2D(ST_SetSRID(ST_MakePoint(?, ?), 4326), ST_SetSRID(ST_MakePoint(?, ?), 4326)), 4326), w.the_geom) ORDER BY RANDOM() LIMIT 1");
 			break;
 		default:
-			s = connection.prepareStatement("SELECT source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('pedestrian', 'path', 'bridleway', 'cycleway', 'footway') AND w.x1 > ? AND w.x1 < ? AND w.y1 < ? AND w.y1 > ? ORDER BY RANDOM() LIMIT 1");
+			s = connection.prepareStatement("SELECT source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('pedestrian', 'path', 'bridleway', 'cycleway', 'footway') AND ST_Contains(ST_SetSRID(ST_MakeBox2D(ST_SetSRID(ST_MakePoint(?, ?), 4326), ST_SetSRID(ST_MakePoint(?, ?), 4326)), 4326), w.the_geom) ORDER BY RANDOM() LIMIT 1");
 			break;
 		}
 		s.setDouble(1, left);
-		s.setDouble(2, right);
-		s.setDouble(3, top);
-		s.setDouble(4, bottom);
+		s.setDouble(2, bottom);
+		s.setDouble(3, right);
+		s.setDouble(4, top);
 		ResultSet rs = s.executeQuery();
 		OSMNode node = null;
 		if (rs.next()) {
@@ -187,7 +187,7 @@ public class Database {
 
 		Path path = getPath(departure, arrival, vehicle, resolution);
 		if(path == null) {
-			return getRandomPath(vehicle, resolution);
+			return getRandomPath(vehicle, resolution, left, right, top, bottom);
 		} else {
 			return path;
 		}

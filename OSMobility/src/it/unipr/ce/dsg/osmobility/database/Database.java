@@ -208,8 +208,8 @@ public class Database {
 	 * @throws SQLException
 	 */
 	public static Path getPath(Location departure, Location arrival, OSMVehicle vehicle, Double resolution) throws SQLException {
-		OSMNode departureOSMNode = getNearestOSMNode(departure, vehicle);
-		OSMNode arrivalOSMNode = getNearestOSMNode(arrival, vehicle);
+		OSMNode departureOSMNode = getNearestOSMNode2(departure, vehicle);
+		OSMNode arrivalOSMNode = getNearestOSMNode2(arrival, vehicle);
 
 		return getPath(departureOSMNode, arrivalOSMNode, vehicle, resolution);
 	}
@@ -364,6 +364,7 @@ public class Database {
 	 * Nearest OSMNode to the specified location.
 	 * @throws SQLException
 	 */
+	@Deprecated
 	public static OSMNode getNearestOSMNode(Location location, OSMVehicle vehicle) throws SQLException {
 		PreparedStatement s;
 		switch(vehicle) {
@@ -397,6 +398,50 @@ public class Database {
 		s.close();
 		return nearestNode;
 	}
+	
+	/**
+	 * Returns the nearest OSMNode to the specified location for the specified vehicle.
+	 * @param location
+	 * - the location for which to search the nearest OSMNode.
+	 * @param vehicle
+	 *  - the type of vehicle allowed to access the node.
+	 * @return
+	 * Nearest OSMNode to the specified location.
+	 * @throws SQLException
+	 */
+	public static OSMNode getNearestOSMNode2(Location location, OSMVehicle vehicle) throws SQLException {
+		PreparedStatement s;
+		switch(vehicle) {
+		case MOTORCAR:
+			s = connection.prepareStatement("SELECT w.source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('pedestrian', 'path', 'bridleway', 'cycleway', 'footway') ORDER BY ST_Distance(w.the_geom, ST_GeographyFromText('SRID=4326;POINT(? ?)')) ASC LIMIT 1");
+			break;
+		case MOTORCYCLE:
+			s = connection.prepareStatement("SELECT w.source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('pedestrian', 'path', 'bridleway', 'cycleway', 'footway') ORDER BY ST_Distance(w.the_geom, ST_GeographyFromText('SRID=4326;POINT(? ?)')) ASC LIMIT 1");
+			break;
+		case BICYCLE:
+			s = connection.prepareStatement("SELECT w.source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('motorway', 'pedestrian', 'bridleway', 'footway') ORDER BY ST_Distance(w.the_geom, ST_GeographyFromText('SRID=4326;POINT(? ?)')) ASC LIMIT 1");
+			break;
+		case FOOT:
+			s = connection.prepareStatement("SELECT w.source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('motorway', 'bridleway', 'cycleway') ORDER BY ST_Distance(w.the_geom, ST_GeographyFromText('SRID=4326;POINT(? ?)')) ASC LIMIT 1");
+			break;
+		case HORSE:
+			s = connection.prepareStatement("SELECT w.source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('motorway', 'pedestrian', 'cycleway', 'footway') ORDER BY ST_Distance(w.the_geom, ST_GeographyFromText('SRID=4326;POINT(? ?)')) ASC LIMIT 1");
+			break;
+		default:
+			s = connection.prepareStatement("SELECT w.source, w.y1, w.x1 FROM ways w JOIN classes c ON w.class_id=c.id WHERE c.name NOT IN ('pedestrian', 'path', 'bridleway', 'cycleway', 'footway') ORDER BY ST_Distance(w.the_geom, ST_GeographyFromText('SRID=4326;POINT(? ?)')) ASC LIMIT 1");
+			break;
+		}
+		s.setDouble(1, location.getLongitude());
+		s.setDouble(2, location.getLatitude());
+		ResultSet rs = s.executeQuery();
+		OSMNode nearestNode = null;
+		if (rs.next()) {
+			nearestNode = new OSMNode(rs.getInt(1), new Location(rs.getDouble(2), rs.getDouble(3)));
+		}
+		rs.close();
+		s.close();
+		return nearestNode;
+	}
 
 	/**
 	 * Returns a random path for the specified vehicle with the specified resolution from departure.
@@ -411,7 +456,7 @@ public class Database {
 	 * @throws SQLException
 	 */
 	public static Path getRandomPath(Location departure, OSMVehicle vehicle, Double resolution) throws SQLException {
-		OSMNode departureOSMNode = getNearestOSMNode(departure, vehicle);
+		OSMNode departureOSMNode = getNearestOSMNode2(departure, vehicle);
 		OSMNode arrivalOSMNode = getRandomOSMNode(vehicle);
 
 		return getPath(departureOSMNode, arrivalOSMNode, vehicle, resolution);
@@ -438,7 +483,7 @@ public class Database {
 	 * @throws SQLException
 	 */
 	public static Path getRandomPath(Location departure, OSMVehicle vehicle, Double resolution, Double left, Double right, Double top, Double bottom) throws SQLException {
-		OSMNode departureOSMNode = getNearestOSMNode(departure, vehicle);
+		OSMNode departureOSMNode = getNearestOSMNode2(departure, vehicle);
 		OSMNode arrivalOSMNode = getRandomOSMNode(vehicle, left, right, top, bottom);
 
 		return getPath(departureOSMNode, arrivalOSMNode, vehicle, resolution);

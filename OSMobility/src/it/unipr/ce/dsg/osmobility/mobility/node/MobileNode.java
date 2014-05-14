@@ -25,6 +25,7 @@ public abstract class MobileNode extends GeoNode {
 	private Location location;
 	private Location nextLocation;
 	private MobilityModel mobilityModel;
+	private Double speed;
 
 	public MobileNode(String id, Properties params, ArrayList<Resource> resources) throws InvalidParamsException {
 		super(id, params, resources);
@@ -43,8 +44,11 @@ public abstract class MobileNode extends GeoNode {
 			nextLocation = path.nextLocation(location);
 
 			Double millis = mobilityModel.evaluateMove(getKey(), location, nextLocation, path);
+
+			speed = location.distanceFrom(nextLocation)/(millis/1000.0d/60.0d/60.0d);
+
 			Float delay = fromMillisToVirtualTime(millis);
-			
+
 			if(delay > 0) {
 				MoveNodeEvent moveNodeEvent;
 				try {
@@ -66,7 +70,7 @@ public abstract class MobileNode extends GeoNode {
 	 */
 	public void move() {
 		location = nextLocation;
-		onLocationChanged(new Location(location));
+		onLocationChanged(new Location(location), speed);
 		scheduleNextMove();
 	}
 
@@ -88,6 +92,7 @@ public abstract class MobileNode extends GeoNode {
 		this.path = path;
 		this.mobilityModel = mobilityModel;
 		this.location = path.getFirstLocation();
+		this.speed = 0.0d;
 	}
 
 	@Override
@@ -110,9 +115,11 @@ public abstract class MobileNode extends GeoNode {
 	 * There are no restrictions on the use of the supplied Location object.
 	 * 
 	 * @param location
-	 * - The new location, as a Location object.
+	 * - the new location, as a Location object.
+	 * @param speed
+	 * - the speed in Km/h
 	 */
-	public abstract void onLocationChanged(Location location);
+	public abstract void onLocationChanged(Location location, Double speed);
 
 	/**
 	 * Called when the path has ended.

@@ -205,10 +205,21 @@ public class PathGenerator {
 				for(Location a : switchstations) {
 					for(Location b : switchstations) {
 						if(!a.equals(b)) {
+							System.out.println("Generating path from " + a + " to " + b + "…");
 							Path path = Database.getPath(a, b, vehicle, resolution);
 							if(path != null) {
-								pathsSet.add(path);
-								System.out.println(pathsSet.size() + " paths generated.");
+								if(path.length() >= pathsMinimumLength) {
+									boolean added = pathsSet.add(path);
+									if(added) {
+										System.out.println(pathsSet.size() + " paths generated.");
+									} else {
+										System.out.println("Path already generated!");
+									}
+								} else {
+									System.out.println("Path generated is shorter than minimum length!");
+								}
+							} else {
+								System.out.println("No path exists between " + a + " and " + b + "!");
 							}
 						}
 					}

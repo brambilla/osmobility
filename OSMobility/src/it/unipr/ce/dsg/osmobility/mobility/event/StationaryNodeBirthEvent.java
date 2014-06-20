@@ -17,13 +17,17 @@ import java.util.Properties;
 
 public abstract class StationaryNodeBirthEvent extends GeoNodeBirthEvent {
 
-	private Location location;
+	Double latitude = null;
+	Double longitude = null;
+
+	Double minimumLongitude = null;
+	Double maximumLongitude = null;
+	Double maximumLatitude = null;
+	Double minimumLatitude = null;
+
 
 	public StationaryNodeBirthEvent(String id, Properties params, Process parentProcess) throws InvalidParamsException {
 		super(id, params, parentProcess);
-
-		Double latitude;
-		Double longitude;
 
 		if(params.containsKey("latitude") || params.containsKey("longitude")) {
 			String latitudeParam = params.getProperty("latitude");
@@ -41,7 +45,6 @@ public abstract class StationaryNodeBirthEvent extends GeoNodeBirthEvent {
 			}
 		} else {
 
-			Double minimumLongitude;
 			String minimumLongitudeParam = params.getProperty("minimumLongitude");
 			try {
 				minimumLongitude = Double.valueOf(minimumLongitudeParam);
@@ -49,7 +52,6 @@ public abstract class StationaryNodeBirthEvent extends GeoNodeBirthEvent {
 				throw new InvalidParamsException("Error in minimum longitude param");
 			}
 
-			Double maximumLongitude;
 			String maximumLongitudeParam = params.getProperty("maximumLongitude");
 			try {
 				maximumLongitude = Double.valueOf(maximumLongitudeParam);
@@ -57,7 +59,6 @@ public abstract class StationaryNodeBirthEvent extends GeoNodeBirthEvent {
 				throw new InvalidParamsException("Error in maximum longitude param");
 			}
 
-			Double maximumLatitude;
 			String maximumLatitudeParam = params.getProperty("maximumLatitude");
 			try {
 				maximumLatitude = Double.valueOf(maximumLatitudeParam);
@@ -65,7 +66,6 @@ public abstract class StationaryNodeBirthEvent extends GeoNodeBirthEvent {
 				throw new InvalidParamsException("Error in maximum latitude param");
 			}
 
-			Double minimumLatitude;
 			String minimumLatitudeParam = params.getProperty("minimumLatitude");
 			try {
 				minimumLatitude = Double.valueOf(minimumLatitudeParam);
@@ -73,19 +73,24 @@ public abstract class StationaryNodeBirthEvent extends GeoNodeBirthEvent {
 				throw new InvalidParamsException("Error in minimum latitude param");
 			}
 
-			latitude = minimumLatitude + Engine.getDefault().getSimulationRandom().nextDouble() * (maximumLatitude - minimumLatitude);
-			longitude = minimumLongitude + Engine.getDefault().getSimulationRandom().nextDouble() * (maximumLongitude - minimumLongitude); 
-
 		}
-
-		location = new Location(latitude, longitude);
 	}
 
 	@Override
 	public void run() throws RunException {
 		super.run();
+
+		try {
+			if(latitude == null || longitude == null) {
+				latitude = minimumLatitude + Engine.getDefault().getSimulationRandom().nextDouble() * (maximumLatitude - minimumLatitude);
+				longitude = minimumLongitude + Engine.getDefault().getSimulationRandom().nextDouble() * (maximumLongitude - minimumLongitude);
+			}
+		} catch(NullPointerException e) {
+			throw new RunException("Error un params");
+		}
+
 		StationaryNode stationaryNode = (StationaryNode) associatedNode;
-		stationaryNode.setLocation(location);
+		stationaryNode.setLocation(new Location(latitude, longitude));
 	}
 
 }

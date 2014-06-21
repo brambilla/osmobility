@@ -110,11 +110,11 @@ public abstract class GeoNode extends Node {
 	 * the nearest {@link GeoNode} to the specified location
 	 */
 	public GeoNode getNearestGeoNode(Location location) {
-		GeoNode nearestGeoNode = this;
+		GeoNode nearestGeoNode = null;
 		for(Node node : Engine.getDefault().getNodes()) {
 			if(node instanceof GeoNode) {
 				GeoNode geoNode = (GeoNode) node;
-				if(geoNode.getLocation().distanceFrom(location) < nearestGeoNode.getLocation().distanceFrom(location)) {
+				if(nearestGeoNode == null || (geoNode.getLocation().distanceFrom(location) < nearestGeoNode.getLocation().distanceFrom(location))) {
 					nearestGeoNode = geoNode;
 				}
 			}
@@ -132,12 +132,14 @@ public abstract class GeoNode extends Node {
 	 * the nearest {@link GeoNode} to the specified location with the specified id
 	 */
 	public GeoNode getNearestGeoNode(Location location, String id) {
-		GeoNode nearestGeoNode = this;
+		GeoNode nearestGeoNode = null;
 		for(Node node : Engine.getDefault().getNodes()) {
 			if(node instanceof GeoNode) {
 				GeoNode geoNode = (GeoNode) node;
-				if(geoNode.getId().equalsIgnoreCase(id) && geoNode.getLocation().distanceFrom(location) < nearestGeoNode.getLocation().distanceFrom(location)) {
-					nearestGeoNode = geoNode;
+				if(geoNode.getId().equalsIgnoreCase(id)) {
+					if(nearestGeoNode == null || (geoNode.getLocation().distanceFrom(location) < nearestGeoNode.getLocation().distanceFrom(location))) {
+						nearestGeoNode = geoNode;
+					}
 				}
 			}
 		}

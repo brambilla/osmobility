@@ -25,7 +25,7 @@ public class FluidTrafficModel extends MobilityModel {
 	}
 	
 	@Override
-	public synchronized Double evaluateMove(Integer mobileNodeKey, Location mobileNodeLocation, Location mobileNodeNextLocation, Path mobileNodePath) {
+	public Double evaluateMove(Integer mobileNodeKey, Location mobileNodeLocation, Location mobileNodeNextLocation, Path mobileNodePath) {
 		OSMWay mobileNodeWay = mobileNodePath.getOSMWay(mobileNodeLocation, mobileNodeNextLocation);
 		OSMDirection mobileNodeWayDirection = mobileNodePath.getOSMDirection(mobileNodeLocation, mobileNodeNextLocation);
 		
@@ -51,8 +51,10 @@ public class FluidTrafficModel extends MobilityModel {
 		}
 		
 		Double k = mobileNodesPerWay.get(mobileNodeWay).size()/(mobileNodeWay.getLength()*1000.0);
+		
 		try {
 			Double speed = Math.max(mobileNodeWay.getMinimumSpeed(mobileNodeWayDirection), mobileNodeWay.getMaximumSpeed(mobileNodeWayDirection)*(1-(k/k_jam)));
+			
 			return mobileNodeWay.getLength()/speed*60.0*60.0*1000.0;
 		} catch (DirectionException e) {
 			e.printStackTrace();

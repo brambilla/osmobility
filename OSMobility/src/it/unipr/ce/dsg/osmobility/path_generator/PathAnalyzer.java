@@ -37,10 +37,16 @@ public class PathAnalyzer {
 
 	private static void analyzePathsSet() {
 		Integer numberOfPaths = 0;
+		
 		Double minimumPathsLength = Double.POSITIVE_INFINITY;
 		Double maximumPathsLength = Double.NEGATIVE_INFINITY;
 		Double totalPathsLength = 0.0;
 		Double averagePathsLength = 0.0;
+
+		Integer minimumPathsSize = Integer.MAX_VALUE;
+		Integer maximumPathsSize = Integer.MIN_VALUE;
+		Integer totalPathsSize = 0;
+		Double averagePathsSize = 0.0;
 
 		numberOfPaths = pathsSet.size();
 		for(Path path : pathsSet) {
@@ -55,15 +61,34 @@ public class PathAnalyzer {
 			}
 
 			totalPathsLength = totalPathsLength + pathLength;
+
+			Integer pathSize = path.size();
+			
+			if(pathSize > maximumPathsSize) {
+				maximumPathsSize = pathSize;
+			}
+			
+			if(pathSize < minimumPathsSize) {
+				minimumPathsSize = pathSize;
+			}
+			
+			totalPathsSize = totalPathsSize + pathSize;
 		}
 
 		averagePathsLength = totalPathsLength / (double) numberOfPaths;
+		averagePathsSize = totalPathsSize / (double) numberOfPaths;
 
 		System.out.println("number of paths: " + numberOfPaths);
-		System.out.println("minimum paths length: " + minimumPathsLength + " Km");
-		System.out.println("maximum paths length: " + maximumPathsLength + " Km");
-		System.out.println("total paths length: " + totalPathsLength + " Km");
-		System.out.println("average paths length: " + averagePathsLength + " Km");
+		
+		System.out.println("minimum paths length: " + minimumPathsLength + " km");
+		System.out.println("maximum paths length: " + maximumPathsLength + " km");
+		System.out.println("total paths length: " + totalPathsLength + " km");
+		System.out.println("average paths length: " + averagePathsLength + " km");
+		
+		System.out.println("minimum paths size: " + minimumPathsSize);
+		System.out.println("maximum paths size: " + maximumPathsSize);
+		System.out.println("total paths size: " + totalPathsSize);
+		System.out.println("average paths size: " + averagePathsSize);
 	}
 
 	private static void readPathsSetFromFile(String name) {
